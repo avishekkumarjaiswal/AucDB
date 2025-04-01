@@ -118,8 +118,7 @@ def init_db():
     c.execute("""
         CREATE TABLE IF NOT EXISTS teams (
             team TEXT PRIMARY KEY,
-            budget INTEGER,
-            password TEXT  -- New column for team password
+            budget INTEGER
         )
     """)
     conn.commit()
@@ -207,18 +206,6 @@ if "teams" not in st.session_state:
 if "team_budgets" not in st.session_state:
     st.session_state.team_budgets = calculate_team_budgets(st.session_state.players)
 
-# Initialize session state for password if not already set
-if "team_password" not in st.session_state:
-    st.session_state.team_password = ""
-
-# Initialize session state for correct password if not already set
-if "correct_password" not in st.session_state:
-    st.session_state.correct_password = None
-
-# Initialize session state for selected team if not already set
-if "selected_team" not in st.session_state:
-    st.session_state.selected_team = None
-
 # Start HTTP server
 if not hasattr(st.session_state, "http_server_started"):
     threading.Thread(target=start_http_server, daemon=True).start()
@@ -232,11 +219,13 @@ st.write("Real-time auction management system with dynamic budget calculation")
 password = st.sidebar.text_input("Enter Admin Password", type="password")
 is_admin = password == ADMIN_PASSWORD
 
-# Refresh Data button
+
+
 if st.button("Refresh Data", key="refresh_data_2"):
     st.session_state.players = load_players_from_db()
     st.session_state.teams = load_teams_from_db()
     st.session_state.team_budgets = calculate_team_budgets(st.session_state.players)
+    st.rerun()  # Changed from experimental_rerun()
 
 # Section 0: Slider for Sold Players
 slider_content = generate_slider_content()
@@ -299,22 +288,21 @@ if is_admin:
         st.subheader("Add New Team")
         new_team = st.text_input("Team Name")
         team_budget = st.number_input("Team Budget (in lakhs)", min_value=0, value=100)
-        team_password = st.text_input("Team Password")  # New input for team password
         
         if st.button("Add Team"):
-            if new_team.strip() and team_password.strip():
+            if new_team.strip():
                 try:
-                    # Insert team, budget, and password into the database
-                    conn.execute("INSERT INTO teams (team, budget, password) VALUES (?, ?, ?)", (new_team, team_budget, team_password))
+                    # Insert team and budget into the database
+                    conn.execute("INSERT INTO teams (team, budget) VALUES (?, ?)", (new_team, team_budget))
                     conn.commit()
                     st.session_state.teams = load_teams_from_db()
                     st.session_state.team_budgets = calculate_team_budgets(st.session_state.players)
-                    st.success(f"Team '{new_team}' with budget '{team_budget}' lakhs and password set!")
+                    st.success(f"Team '{new_team}' with budget '{team_budget}' lakhs added!")
                     st.rerun()
                 except sqlite3.IntegrityError:
                     st.error(f"Team '{new_team}' already exists!")
             else:
-                st.error("Team name and password cannot be empty")
+                st.error("Team name cannot be empty")
         
         st.subheader("Player Management")
         with st.form("player_form"):
@@ -414,141 +402,63 @@ else:
 st.header("Team Squads")
 selected_team = st.selectbox("Select Team", options=list(st.session_state.team_budgets.keys()))
 
-# Store the selected team in session state
-st.session_state.selected_team = selected_team
-
 if selected_team:
-    # Check if the user is an admin
-    if is_admin:
-        # Admin can see the squad without a password
-        squad = st.session_state.players[st.session_state.players["team_bought"] == selected_team]
-        if not squad.empty:
-            st.dataframe(squad)
-            
-            total_spent = squad["sold_amount"].sum() / 100  # Convert to Cr
-            remaining_budget = st.session_state.team_budgets[selected_team] / 100  # Convert to Cr
-            total_rating = squad["rating"].sum()
-            
-            # Count Indian and Foreign players
-            total_indian = len(squad[squad['nationality'] == 'Indian'])
-            total_foreign = len(squad[squad['nationality'] == 'Foreign'])
-            
-            # Count player types
-            total_players = len(squad)  # Total number of players bought
-            batters = len(squad[squad['Role'] == 'Batter'])
-            bowlers = len(squad[squad['Role'] == 'Bowler'])
-            allrounders = len(squad[squad['Role'] == 'Allrounder'])
-            wicketkeepers = len(squad[squad['Role'] == 'Wicketkeeper'])
-            
-            # Create a DataFrame for the summary excluding Total Spent and Remaining Budget
-            summary_data = {
-                "Description": [
-                    "Total Rating",
-                    "Player Counts",
-                    "Batters",
-                    "Bowlers",
-                    "Allrounders",
-                    "Wicketkeepers",
-                    "Indian",
-                    "Foreign"
-                ],
-                "Count": [
-                    total_rating,
-                    total_players,
-                    batters,
-                    bowlers,
-                    allrounders,
-                    wicketkeepers,
-                    total_indian,
-                    total_foreign
-                ]
-            }
-            
-            summary_df = pd.DataFrame(summary_data)
-            
-            # Set multi-index for better layout
-            summary_df = summary_df.set_index("Description").T
-            
-            # Display the summary DataFrame
-            st.dataframe(summary_df, use_container_width=True)  # Use container width for better layout
-            
-            # Display remaining budget
-            st.write(f"**Total Spent:** {total_spent} Cr")
-            st.write(f"**Remaining Budget:** {remaining_budget} Cr")
-        else:
-            st.write(f"No players bought by {selected_team} yet")
+    squad = st.session_state.players[st.session_state.players["team_bought"] == selected_team]
+    if not squad.empty:
+        st.dataframe(squad)
+        
+        total_spent = squad["sold_amount"].sum() / 100  # Convert to Cr
+        remaining_budget = st.session_state.team_budgets[selected_team] / 100  # Convert to Cr
+        total_rating = squad["rating"].sum()
+        
+        # Count Indian and Foreign players
+        total_indian = len(squad[squad['nationality'] == 'Indian'])
+        total_foreign = len(squad[squad['nationality'] == 'Foreign'])
+        
+        # Count player types
+        total_players = len(squad)  # Total number of players bought
+        batters = len(squad[squad['Role'] == 'Batter'])
+        bowlers = len(squad[squad['Role'] == 'Bowler'])
+        allrounders = len(squad[squad['Role'] == 'Allrounder'])
+        wicketkeepers = len(squad[squad['Role'] == 'Wicketkeeper'])
+        
+        # Create a DataFrame for the summary excluding Total Spent and Remaining Budget
+        summary_data = {
+            "Description": [
+                "Total Rating",
+                "Player Counts",
+                "Batters",
+                "Bowlers",
+                "Allrounders",
+                "Wicketkeepers",
+                "Indian",
+                "Foreign"
+            ],
+            "Count": [
+                total_rating,
+                total_players,
+                batters,
+                bowlers,
+                allrounders,
+                wicketkeepers,
+                total_indian,
+                total_foreign
+            ]
+        }
+        
+        summary_df = pd.DataFrame(summary_data)
+        
+        # Set multi-index for better layout
+        summary_df = summary_df.set_index("Description").T
+        
+        # Display the summary DataFrame
+        st.dataframe(summary_df, use_container_width=True)  # Use container width for better layout
+        
+        # Display remaining budget
+        st.write(f"**Total Spent:** {total_spent} Cr")
+        st.write(f"**Remaining Budget:** {remaining_budget} Cr")
     else:
-        # Password input for team for non-admin users
-        team_password = st.text_input("Enter Password for Team", type="password", value=st.session_state.team_password)
-
-        # Store the password in session state
-        st.session_state.team_password = team_password
-
-        # Fetch the password from the database
-        team_info = load_teams_from_db()
-        team_row = team_info[team_info['team'] == selected_team]
-        st.session_state.correct_password = team_row['password'].values[0] if not team_row.empty else None
-
-        # Check if the entered password is correct
-        if team_password == st.session_state.correct_password:
-            squad = st.session_state.players[st.session_state.players["team_bought"] == selected_team]
-            if not squad.empty:
-                st.dataframe(squad)
-                
-                total_spent = squad["sold_amount"].sum() / 100  # Convert to Cr
-                remaining_budget = st.session_state.team_budgets[selected_team] / 100  # Convert to Cr
-                total_rating = squad["rating"].sum()
-                
-                # Count Indian and Foreign players
-                total_indian = len(squad[squad['nationality'] == 'Indian'])
-                total_foreign = len(squad[squad['nationality'] == 'Foreign'])
-                
-                # Count player types
-                total_players = len(squad)  # Total number of players bought
-                batters = len(squad[squad['Role'] == 'Batter'])
-                bowlers = len(squad[squad['Role'] == 'Bowler'])
-                allrounders = len(squad[squad['Role'] == 'Allrounder'])
-                wicketkeepers = len(squad[squad['Role'] == 'Wicketkeeper'])
-                
-                # Create a DataFrame for the summary excluding Total Spent and Remaining Budget
-                summary_data = {
-                    "Description": [
-                        "Total Rating",
-                        "Player Counts",
-                        "Batters",
-                        "Bowlers",
-                        "Allrounders",
-                        "Wicketkeepers",
-                        "Indian",
-                        "Foreign"
-                    ],
-                    "Count": [
-                        total_rating,
-                        total_players,
-                        batters,
-                        bowlers,
-                        allrounders,
-                        wicketkeepers,
-                        total_indian,
-                        total_foreign
-                    ]
-                }
-                
-                summary_df = pd.DataFrame(summary_data)
-                
-                # Set multi-index for better layout
-                summary_df = summary_df.set_index("Description").T
-                
-                # Display the summary DataFrame
-                st.dataframe(summary_df, use_container_width=True)  # Use container width for better layout
-                
-                # Display remaining budget
-                st.write(f"**Total Spent:** {total_spent} Cr")
-                st.write(f"**Remaining Budget:** {remaining_budget} Cr")
-            else:
-                st.write(f"No players bought by {selected_team} yet")
-        elif team_password:  # Only show error if the password field is not empty
-            st.error("Incorrect password. Please try again.")
+        st.write(f"No players bought by {selected_team} yet")
 
 # Section 4: Rankings
 st.header("Team Rankings")
