@@ -225,7 +225,7 @@ if not hasattr(st.session_state, "http_server_started"):
     st.session_state.http_server_started = True
 
 # App title and description
-st.title("Hindu's E-Cell Mock B-Auction Dashboard")
+st.title("Hindu's E-Cell Mock IPL Auction Dashboard")
 st.write("Real-time auction management system with dynamic budget calculation")
 
 # Password protection
@@ -323,7 +323,7 @@ if is_admin:
             team_options = ["Unsold"] + list(st.session_state.team_budgets.keys())
             team_bought = st.selectbox("Team", options=team_options)
             rating = st.number_input("Rating (1-100)", min_value=1, max_value=100, value=50)
-            role = st.selectbox("Role", ["Top Executive", "Board of Directors", "Shareholders"])
+            role = st.selectbox("Role", ["Batter", "Bowler", "Allrounder", "Wicketkeeper"])
             nationality = st.selectbox("Nationality", ["Indian", "Foreign"])
             
             col1, col2, col3 = st.columns(3)
@@ -435,27 +435,30 @@ if selected_team:
             
             # Count player types
             total_players = len(squad)  # Total number of players bought
-            top_executives = len(squad[squad['Role'] == 'Top Executive'])
-            board_of_directors = len(squad[squad['Role'] == 'Board of Directors'])
-            shareholders = len(squad[squad['Role'] == 'Shareholders'])
+            batters = len(squad[squad['Role'] == 'Batter'])
+            bowlers = len(squad[squad['Role'] == 'Bowler'])
+            allrounders = len(squad[squad['Role'] == 'Allrounder'])
+            wicketkeepers = len(squad[squad['Role'] == 'Wicketkeeper'])
             
             # Create a DataFrame for the summary excluding Total Spent and Remaining Budget
             summary_data = {
                 "Description": [
                     "Total Rating",
                     "Player Counts",
-                    "Top Executives",
-                    "Board of Directors",
-                    "Shareholders",
+                    "Batters",
+                    "Bowlers",
+                    "Allrounders",
+                    "Wicketkeepers",
                     "Indian",
                     "Foreign"
                 ],
                 "Count": [
                     total_rating,
                     total_players,
-                    top_executives,
-                    board_of_directors,
-                    shareholders,
+                    batters,
+                    bowlers,
+                    allrounders,
+                    wicketkeepers,
                     total_indian,
                     total_foreign
                 ]
@@ -502,27 +505,30 @@ if selected_team:
                 
                 # Count player types
                 total_players = len(squad)  # Total number of players bought
-                top_executives = len(squad[squad['Role'] == 'Top Executive'])
-                board_of_directors = len(squad[squad['Role'] == 'Board of Directors'])
-                shareholders = len(squad[squad['Role'] == 'Shareholders'])
+                batters = len(squad[squad['Role'] == 'Batter'])
+                bowlers = len(squad[squad['Role'] == 'Bowler'])
+                allrounders = len(squad[squad['Role'] == 'Allrounder'])
+                wicketkeepers = len(squad[squad['Role'] == 'Wicketkeeper'])
                 
                 # Create a DataFrame for the summary excluding Total Spent and Remaining Budget
                 summary_data = {
                     "Description": [
                         "Total Rating",
                         "Player Counts",
-                        "Top Executives",
-                        "Board of Directors",
-                        "Shareholders",
+                        "Batters",
+                        "Bowlers",
+                        "Allrounders",
+                        "Wicketkeepers",
                         "Indian",
                         "Foreign"
                     ],
                     "Count": [
                         total_rating,
                         total_players,
-                        top_executives,
-                        board_of_directors,
-                        shareholders,
+                        batters,
+                        bowlers,
+                        allrounders,
+                        wicketkeepers,
                         total_indian,
                         total_foreign
                     ]
